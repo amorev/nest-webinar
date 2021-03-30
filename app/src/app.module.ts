@@ -15,7 +15,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
       password: 'S3RooTPass123',
       database: 'webinar_3003',
       entities: [
-        __dirname + '/entities/user.js'
+        __dirname + '/entities/*.js'
       ],
       synchronize: true,
     }),

@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Request, Res } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Put, Request, Res } from '@nestjs/common';
 import { AppService } from './app.service';
 import { HelloService } from './hello.service';
 import { UserService } from './user.service';
@@ -21,16 +21,28 @@ export class AppController {
 
     @Get('/users')
     async getUsers(@Param('id') id: number): Promise<any> {
-
         return this.userService.getUsers();
     }
 
-    @Get('/user-create')
-    createUser(): any {
-        return this.userService.createUser({
-            id: 2,
-            name: "ivan"
-        });
+    @Get('/users/:id')
+    async getUserById(@Param('id') id: number): Promise<any> {
+        return this.userService.getUserById(id);
+    }
+
+    @Put('/users/:id')
+    async updateUserById(@Param('id') id: number, @Body() user: User): Promise<void> {
+        return this.userService.updateUser(id, user);
+    }
+
+    @Delete('/users/:id')
+    async deleteUserById(@Param('id') id: number): Promise<void> {
+        this.userService.deleteUserById(id);
+    }
+
+    @Post('/users')
+    async createUser(@Body() userData: User): Promise<User> {
+        const userCreated = await this.userService.createUser(userData);
+        return userCreated;
     }
 
     @Get('/hello')
