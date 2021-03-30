@@ -1,14 +1,16 @@
-import { Body, Controller, Get, Param, Post, Request, Res } from '@nestjs/common';
+import { Controller, Get, Param, Request, Res } from '@nestjs/common';
 import { AppService } from './app.service';
 import { HelloService } from './hello.service';
 import { UserService } from './user.service';
+import { Connection } from 'typeorm';
+import { User } from './entities/user';
 
-@Controller('/app')
+@Controller('/')
 export class AppController {
     constructor(
         private readonly appService: AppService,
         private readonly helloService: HelloService,
-        private readonly userService: UserService
+        private readonly userService: UserService,
     ) {
     }
 
@@ -17,8 +19,9 @@ export class AppController {
         return this.appService.getHello();
     }
 
-    @Get('/users/:id')
-    getUsers(@Param('id') id: number): any {
+    @Get('/users')
+    async getUsers(@Param('id') id: number): Promise<any> {
+
         return this.userService.getUsers();
     }
 
