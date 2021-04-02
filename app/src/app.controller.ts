@@ -1,7 +1,19 @@
-import { Body, Controller, Delete, Get, Param, Post, Put, Request, Res } from '@nestjs/common';
+import {
+    Body,
+    Controller,
+    Delete,
+    Get,
+    HttpException,
+    HttpStatus,
+    Param,
+    Post,
+    Put,
+    Request,
+    Res
+} from '@nestjs/common';
 import { AppService } from './app.service';
 import { HelloService } from './hello.service';
-import { UserService } from './user.service';
+import { UserNotFoundError, UserService } from './user.service';
 import { Connection } from 'typeorm';
 import { User } from './entities/user';
 
@@ -41,8 +53,12 @@ export class AppController {
 
     @Post('/users')
     async createUser(@Body() userData: User): Promise<User> {
-        const userCreated = await this.userService.createUser(userData);
-        return userCreated;
+        try {
+            const userCreated = await this.userService.createUser(userData);
+            return userCreated;
+        } catch (e) {
+            throw new HttpException('Bad request', HttpStatus.BAD_REQUEST)
+        }
     }
 
     @Get('/hello')

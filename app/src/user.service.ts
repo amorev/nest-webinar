@@ -1,6 +1,10 @@
-import { Injectable } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { Connection, Repository } from 'typeorm';
 import { User } from './entities/user';
+
+export class UserNotFoundError extends Error {
+
+}
 
 @Injectable()
 export class UserService {
@@ -18,7 +22,11 @@ export class UserService {
     }
 
     async getUserById(id: number): Promise<User> {
-        return await this.userRepository.findOne(id);
+        let user = await this.userRepository.findOne(id);
+        if (!user) {
+            throw new HttpException('Not found', HttpStatus.NOT_FOUND);
+        }
+        return user;
     }
 
     async deleteUserById(id: number): Promise<void> {
@@ -26,7 +34,7 @@ export class UserService {
     }
 
     async updateUser(id: number, newUser: Partial<User>): Promise<void> {
-        await this.userRepository.update(id, newUser)
+        await this.userRepository.update(id, newUser);
     }
 
     async createUser(user: User): Promise<User> {
