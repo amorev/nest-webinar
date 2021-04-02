@@ -33,6 +33,10 @@ export class UserService {
         await this.userRepository.delete(id);
     }
 
+    async getUserByUserName(username: string): Promise<User> {
+        return this.userRepository.findOne({name: username});
+    }
+
     async updateUser(id: number, newUser: Partial<User>): Promise<void> {
         await this.userRepository.update(id, newUser);
     }

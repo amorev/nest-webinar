@@ -1,16 +1,16 @@
 import {
     ArgumentMetadata,
-    Body, CanActivate,
-    Controller,
+    Body, CallHandler, CanActivate,
+    Controller, createParamDecorator,
     Delete, ExecutionContext,
     Get,
     HttpException,
-    HttpStatus, Injectable,
+    HttpStatus, Injectable, NestInterceptor,
     Param, ParseArrayPipe, ParseIntPipe, PipeTransform,
     Post,
     Put,
     Request,
-    Res, UseGuards
+    Res, UseGuards, UseInterceptors
 } from '@nestjs/common';
 import { AppService } from './app.service';
 import { HelloService } from './hello.service';
@@ -19,6 +19,8 @@ import { Connection } from 'typeorm';
 import { User } from './entities/user';
 import { Repository } from 'typeorm';
 import { Observable } from 'rxjs';
+import { map, tap } from 'rxjs/operators';
+import { AuthGuard } from '@nestjs/passport';
 
 @Injectable()
 class ValidateUserIdPipe implements PipeTransform {
@@ -43,7 +45,7 @@ class ValidateUserIdPipe implements PipeTransform {
 }
 
 @Injectable()
-class AuthGuard implements CanActivate {
+class AuthGuardMy implements CanActivate {
     canActivate(context: ExecutionContext): boolean | Promise<boolean> | Observable<boolean> {
         return context.switchToHttp().getRequest().headers.authorization === 'Basic login:password';
     }
@@ -69,14 +71,56 @@ class ExtractUserByIdPipe implements PipeTransform {
     }
 }
 
+@Injectable()
+class LoggingInterceptor implements NestInterceptor {
+    intercept(context: ExecutionContext, next: CallHandler<any>): Observable<any> | Promise<Observable<any>> {
+        console.log('logging request before');
+        return next.handle().pipe(
+            tap(() => {
+                console.log('after request');
+            })
+        );
+    }
+
+}
+
+@Injectable()
+class TransformUserIdToUserInterceptor implements NestInterceptor {
+    private userRepository: Repository<User>;
+
+    constructor
+    (
+        private connection: Connection
+    ) {
+        this.userRepository = this.connection.getRepository(User);
+    }
+
+    intercept(context: ExecutionContext, next: CallHandler<any>): Observable<any> | Promise<Observable<any>> {
+        return next.handle().pipe(map(val => {
+            return this.userRepository.findOne(val);
+        }));
+    }
+}
+
+const AuthDecorator = createParamDecorator((data: unknown, ctx: ExecutionContext) => {
+    const request = ctx.switchToHttp().getRequest();
+    const token = request.headers.authorization || null;
+    return token;
+});
+
 @Controller('/')
-@UseGuards(AuthGuard)
 export class AppController {
     constructor(
         private readonly appService: AppService,
         private readonly helloService: HelloService,
         private readonly userService: UserService,
     ) {
+    }
+
+    @Post('auth/login')
+    @UseGuards(AuthGuard('local'))
+    async login(@Request() req: any) {
+        return req.user;
     }
 
     @Get()
@@ -90,7 +134,10 @@ export class AppController {
     }
 
     @Get('/users/:id')
-    async getUserById(@Param('id', ParseIntPipe, ExtractUserByIdPipe) id: User): Promise<any> {
+    @UseInterceptors(LoggingInterceptor, TransformUserIdToUserInterceptor)
+    async getUserById(@Request() req: any, @Param('id', ParseIntPipe) id: User, @AuthDecorator() token: string): Promise<any> {
+        const token2 = req.headers.authorization;
+        console.log(token2, token);
         return id;
     }
 
