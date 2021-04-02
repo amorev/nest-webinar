@@ -41,6 +41,26 @@ class ValidateUserIdPipe implements PipeTransform {
     }
 }
 
+@Injectable()
+class ExtractUserByIdPipe implements PipeTransform {
+    private userRepository: Repository<User>;
+
+    constructor
+    (
+        private connection: Connection
+    ) {
+        this.userRepository = this.connection.getRepository(User);
+    }
+
+    async transform(value: any, metadata: ArgumentMetadata): Promise<any> {
+        const user = await this.userRepository.findOne(value);
+        if (!user) {
+            throw new HttpException('Wrong user id', HttpStatus.BAD_REQUEST);
+        }
+        return user;
+    }
+}
+
 @Controller('/')
 export class AppController {
     constructor(
@@ -61,8 +81,8 @@ export class AppController {
     }
 
     @Get('/users/:id')
-    async getUserById(@Param('id', ParseIntPipe, ValidateUserIdPipe) id: number): Promise<any> {
-        return this.userService.getUserById(id);
+    async getUserById(@Param('id', ParseIntPipe, ExtractUserByIdPipe) id: User): Promise<any> {
+        return id;
     }
 
     @Put('/users/:id')
