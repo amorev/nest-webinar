@@ -1,8 +1,8 @@
 import {
     ArgumentMetadata,
-    Body,
+    Body, CanActivate,
     Controller,
-    Delete,
+    Delete, ExecutionContext,
     Get,
     HttpException,
     HttpStatus, Injectable,
@@ -10,7 +10,7 @@ import {
     Post,
     Put,
     Request,
-    Res
+    Res, UseGuards
 } from '@nestjs/common';
 import { AppService } from './app.service';
 import { HelloService } from './hello.service';
@@ -18,6 +18,7 @@ import { UserNotFoundError, UserService } from './user.service';
 import { Connection } from 'typeorm';
 import { User } from './entities/user';
 import { Repository } from 'typeorm';
+import { Observable } from 'rxjs';
 
 @Injectable()
 class ValidateUserIdPipe implements PipeTransform {
@@ -42,6 +43,13 @@ class ValidateUserIdPipe implements PipeTransform {
 }
 
 @Injectable()
+class AuthGuard implements CanActivate {
+    canActivate(context: ExecutionContext): boolean | Promise<boolean> | Observable<boolean> {
+        return context.switchToHttp().getRequest().headers.authorization === 'Basic login:password';
+    }
+}
+
+@Injectable()
 class ExtractUserByIdPipe implements PipeTransform {
     private userRepository: Repository<User>;
 
@@ -62,6 +70,7 @@ class ExtractUserByIdPipe implements PipeTransform {
 }
 
 @Controller('/')
+@UseGuards(AuthGuard)
 export class AppController {
     constructor(
         private readonly appService: AppService,
