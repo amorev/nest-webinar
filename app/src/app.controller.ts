@@ -1,11 +1,12 @@
 import {
+    ArgumentMetadata,
     Body,
     Controller,
     Delete,
     Get,
     HttpException,
-    HttpStatus,
-    Param,
+    HttpStatus, Injectable,
+    Param, ParseArrayPipe, ParseIntPipe, PipeTransform,
     Post,
     Put,
     Request,
@@ -16,6 +17,29 @@ import { HelloService } from './hello.service';
 import { UserNotFoundError, UserService } from './user.service';
 import { Connection } from 'typeorm';
 import { User } from './entities/user';
+import { Repository } from 'typeorm';
+
+@Injectable()
+class ValidateUserIdPipe implements PipeTransform {
+    private userRepository: Repository<User>;
+
+    constructor
+    (
+        private connection: Connection
+    ) {
+        this.userRepository = this.connection.getRepository(User);
+    }
+
+    async transform(value: any, metadata: ArgumentMetadata): Promise<any> {
+        const user = await this.userRepository.findOne(value);
+        if (!user) {
+            throw new HttpException('Wrong user id', HttpStatus.BAD_REQUEST);
+        }
+        console.log(user);
+
+        return value;
+    }
+}
 
 @Controller('/')
 export class AppController {
@@ -37,7 +61,7 @@ export class AppController {
     }
 
     @Get('/users/:id')
-    async getUserById(@Param('id') id: number): Promise<any> {
+    async getUserById(@Param('id', ParseIntPipe, ValidateUserIdPipe) id: number): Promise<any> {
         return this.userService.getUserById(id);
     }
 
@@ -57,7 +81,7 @@ export class AppController {
             const userCreated = await this.userService.createUser(userData);
             return userCreated;
         } catch (e) {
-            throw new HttpException('Bad request', HttpStatus.BAD_REQUEST)
+            throw new HttpException('Bad request', HttpStatus.BAD_REQUEST);
         }
     }
 
